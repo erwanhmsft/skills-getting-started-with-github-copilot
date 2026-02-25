@@ -20,14 +20,64 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const spotsLeft = details.max_participants - details.participants.length;
 
+
+        // Create participants list HTML with delete icon
+        let participantsHTML = "<ul class='participants-list'>";
+        if (details.participants.length === 0) {
+          participantsHTML += "<li class='no-participants'>No participants yet</li>";
+        } else {
+          details.participants.forEach(email => {
+            participantsHTML += `
+              <li class="participant-row">
+                <span class='participant-email'>${email}</span>
+                <button class="delete-participant-btn" title="Remove participant" data-activity="${name}" data-email="${email}">
+                  <svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 20 20' fill='none' stroke='#c62828' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><line x1='5' y1='5' x2='15' y2='15'/><line x1='15' y1='5' x2='5' y2='15'/></svg>
+                </button>
+              </li>
+            `;
+          });
+        }
+        participantsHTML += "</ul>";
+
         activityCard.innerHTML = `
           <h4>${name}</h4>
           <p>${details.description}</p>
           <p><strong>Schedule:</strong> ${details.schedule}</p>
           <p><strong>Availability:</strong> ${spotsLeft} spots left</p>
+          <div class="participants-section">
+            <strong>Participants:</strong>
+            ${participantsHTML}
+          </div>
         `;
 
+
         activitiesList.appendChild(activityCard);
+
+        // Add event listeners for delete buttons after card is in DOM
+        setTimeout(() => {
+          activityCard.querySelectorAll('.delete-participant-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+              e.preventDefault();
+              const activity = btn.getAttribute('data-activity');
+              const email = btn.getAttribute('data-email');
+              if (!activity || !email) return;
+              // Call API to unregister participant
+              try {
+                const response = await fetch(`/activities/${encodeURIComponent(activity)}/unregister?email=${encodeURIComponent(email)}`, {
+                  method: 'DELETE',
+                });
+                if (response.ok) {
+                  fetchActivities(); // Refresh list
+                } else {
+                  const result = await response.json();
+                  alert(result.detail || 'Failed to remove participant.');
+                }
+              } catch (error) {
+                alert('Failed to remove participant.');
+              }
+            });
+          });
+        }, 0);
 
         // Add option to select dropdown
         const option = document.createElement("option");
